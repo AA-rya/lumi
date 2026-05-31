@@ -720,7 +720,6 @@
       min-height: 18px;
     }
   </style>
-  <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1691.0.min.js"></script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
@@ -954,12 +953,7 @@
 </div>
 
 <script>
-  AWS.config.update({
-    accessKeyId: '',
-    secretAccessKey: '',
-    region: 'us-east-1'
-  });
-  const _lambda = new AWS.Lambda();
+  const LAMBDA_URL = 'https://rgv3xofs7gdkfuptzxdsxivbhi0omcky.lambda-url.us-east-1.on.aws';
 
   let currentUserId = localStorage.getItem('lumi_user_id') || null;
   let currentUserEmail = localStorage.getItem('lumi_email') || null;
@@ -986,22 +980,19 @@
   }
 
   async function callLambda(method, path, body) {
-    const event = {
-      requestContext: { http: { method, path } },
-      body: body != null ? JSON.stringify(body) : null,
-      userId: activeUserId()
-    };
-    const result = await _lambda.invoke({
-      FunctionName: 'lumi-api',
-      Payload: JSON.stringify(event)
-    }).promise();
-    const response = JSON.parse(result.Payload);
-    if (response.statusCode >= 400) {
-      let msg = `HTTP ${response.statusCode}`;
-      try { msg = JSON.parse(response.body).error || msg; } catch {}
+    const headers = { 'Content-Type': 'application/json' };
+    if (activeUserId()) headers['X-User-Id'] = activeUserId();
+    const res = await fetch(LAMBDA_URL + path, {
+      method,
+      headers,
+      body: body != null ? JSON.stringify(body) : undefined
+    });
+    if (!res.ok) {
+      let msg = `HTTP ${res.status}`;
+      try { msg = (await res.json()).error || msg; } catch {}
       throw new Error(msg);
     }
-    return JSON.parse(response.body);
+    return res.json();
   }
 
   const messagesEl = document.getElementById('messages');
