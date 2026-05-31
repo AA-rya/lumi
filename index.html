@@ -1,0 +1,1480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lumi</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #e8f0fe;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .app {
+      display: flex;
+      width: 720px;
+      height: 700px;
+      border-radius: 28px;
+      overflow: hidden;
+      box-shadow: 0 24px 70px rgba(60, 100, 200, 0.15), 0 4px 20px rgba(0,0,0,0.08);
+      border: 1px solid #3a6ea8;
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 210px;
+      background: #d8ebf9;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid #3a6ea8;
+      flex-shrink: 0;
+    }
+
+    .sidebar-header {
+      padding: 20px 14px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #3a6ea8;
+    }
+
+    .sidebar-title {
+      font-weight: 700;
+      font-size: 17px;
+      color: #1a2e4a;
+      letter-spacing: -0.3px;
+    }
+
+    .new-chat-btn {
+      background: linear-gradient(135deg, #5ba3f5, #3d82e0);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 5px 10px;
+      font-size: 18px;
+      cursor: pointer;
+      line-height: 1;
+      box-shadow: 0 2px 8px rgba(61, 130, 224, 0.3);
+      transition: transform 0.15s;
+    }
+
+    .new-chat-btn:hover { transform: scale(1.08); }
+
+    .convo-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 0;
+    }
+
+    .convo-list::-webkit-scrollbar { width: 3px; }
+    .convo-list::-webkit-scrollbar-thumb { background: #b0ccf0; border-radius: 3px; }
+
+    .convo-item {
+      padding: 10px 14px;
+      cursor: pointer;
+      border-bottom: 1px solid #ccd8f5;
+      transition: background 0.12s;
+    }
+
+    .convo-item:hover { background: #c8daf5; }
+    .convo-item.active { background: #b8ccf0; }
+
+    .convo-title {
+      font-size: 13px;
+      font-weight: 500;
+      color: #1a2e4a;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .topic-header {
+      padding: 10px 14px 4px;
+      font-size: 10px;
+      font-weight: 700;
+      color: #607090;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      user-select: none;
+    }
+
+    .topic-arrow {
+      font-size: 9px;
+      opacity: 0.6;
+      transition: transform 0.18s;
+      display: inline-block;
+    }
+
+    .topic-group.collapsed .topic-arrow { transform: rotate(-90deg); }
+    .topic-group.collapsed .topic-items { display: none; }
+
+    .empty-sidebar {
+      padding: 20px 14px;
+      font-size: 12px;
+      color: #7090b0;
+      text-align: center;
+      line-height: 1.5;
+    }
+
+    /* ── Chat Panel ── */
+    .chat-panel {
+      flex: 1;
+      background: #fff;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #f0f6ff, #deeafb);
+      border-bottom: 1px solid #3a6ea8;
+      padding: 16px 16px 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .avatar {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #93c5fd, #60a5fa);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+      box-shadow: 0 3px 10px rgba(93, 160, 240, 0.4);
+    }
+
+    .header-info .name {
+      font-weight: 700;
+      font-size: 15px;
+      color: #1a2e4a;
+    }
+
+    .header-info .status {
+      font-size: 11px;
+      color: #507090;
+      margin-top: 2px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #34c759;
+      display: inline-block;
+    }
+
+    .model-select {
+      margin-left: auto;
+      font-size: 11px;
+      border: 1px solid #b8ccf0;
+      border-radius: 10px;
+      padding: 4px 8px;
+      background: #fff;
+      color: #507090;
+      cursor: pointer;
+      font-weight: 500;
+    }
+
+    .error-banner {
+      display: none;
+      background: #ff6b8a;
+      color: #fff;
+      font-size: 12px;
+      text-align: center;
+      padding: 6px 12px;
+    }
+    .error-banner.visible { display: block; }
+
+    .messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      scroll-behavior: smooth;
+      background: #f8fbff;
+    }
+
+    .messages::-webkit-scrollbar { width: 4px; }
+    .messages::-webkit-scrollbar-thumb { background: #c0d0f0; border-radius: 4px; }
+
+    .bubble-row { display: flex; flex-direction: column; }
+    .bubble-row.user { align-items: flex-end; }
+    .bubble-row.assistant { align-items: flex-start; }
+
+    .bubble {
+      max-width: 78%;
+      padding: 10px 14px;
+      border-radius: 18px;
+      font-size: 14px;
+      line-height: 1.5;
+      word-break: break-word;
+      white-space: pre-wrap;
+    }
+
+    .bubble-row.user .bubble {
+      background: linear-gradient(135deg, #5ba3f5, #3d82e0);
+      color: #fff;
+      border-bottom-right-radius: 5px;
+      box-shadow: 0 2px 8px rgba(61, 130, 224, 0.25);
+    }
+
+    .bubble-row.assistant .bubble {
+      background: #d0e4f8;
+      color: #1a2e4a;
+      border-bottom-left-radius: 5px;
+    }
+
+    .timestamp {
+      font-size: 10px;
+      color: #a0b0c0;
+      margin-top: 3px;
+      padding: 0 4px;
+    }
+
+    .typing-indicator {
+      display: none;
+      align-items: center;
+      gap: 5px;
+      padding: 11px 14px;
+      background: #d0e4f8;
+      border-radius: 18px;
+      border-bottom-left-radius: 5px;
+      width: fit-content;
+    }
+
+    .typing-indicator.visible { display: flex; }
+
+    .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #87b0e0;
+      animation: bounce 1.2s infinite;
+    }
+    .dot:nth-child(2) { animation-delay: 0.2s; }
+    .dot:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes bounce {
+      0%, 60%, 100% { transform: translateY(0); }
+      30% { transform: translateY(-5px); }
+    }
+
+    .input-area {
+      border-top: 1px solid #3a6ea8;
+      padding: 10px 12px;
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+      background: linear-gradient(135deg, #f0f6ff, #deeafb);
+    }
+
+    .input-wrap {
+      flex: 1;
+      border: 1.5px solid #b8ccf0;
+      border-radius: 20px;
+      background: #fff;
+      padding: 8px 14px;
+      transition: border-color 0.2s;
+    }
+
+    .input-wrap:focus-within { border-color: #60a5fa; }
+
+    textarea {
+      width: 100%;
+      border: none;
+      outline: none;
+      resize: none;
+      font-size: 14px;
+      font-family: inherit;
+      background: transparent;
+      max-height: 110px;
+      line-height: 1.4;
+      color: #1a2e4a;
+    }
+
+    textarea::placeholder { color: #a0b8d0; }
+
+    .send-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #5ba3f5, #3d82e0);
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      box-shadow: 0 3px 10px rgba(61, 130, 224, 0.3);
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+
+    .send-btn:disabled { background: #d0dff0; box-shadow: none; cursor: default; }
+    .send-btn:not(:disabled):hover { transform: scale(1.06); }
+    .send-btn:not(:disabled):active { transform: scale(0.92); }
+
+    .send-btn svg { width: 15px; height: 15px; }
+
+    /* ── Sidebar tabs ── */
+    .sidebar-tabs {
+      display: flex;
+      border-bottom: 1px solid #3a6ea8;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 8px 0;
+      font-size: 11px;
+      font-weight: 600;
+      border: none;
+      background: none;
+      color: #7090b0;
+      cursor: pointer;
+      transition: color 0.15s, background 0.15s;
+      letter-spacing: 0.2px;
+    }
+    .tab-btn.active {
+      color: #4070c0;
+      background: #e8f0fe;
+      border-bottom: 2px solid #3d82e0;
+    }
+    .tab-content { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+    .tab-content.active { display: flex; }
+
+    /* ── Email (inside chats tab) ── */
+    .email-btn {
+      background: none;
+      border: 1px solid #b0c8e8;
+      border-radius: 8px;
+      color: #507090;
+      font-size: 12px;
+      padding: 4px 8px;
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+    .email-btn:hover { background: #dceeff; }
+
+    .email-panel {
+      display: none;
+      flex-direction: column;
+      gap: 6px;
+      padding: 8px 14px 10px;
+      background: #e0eeff;
+      border-bottom: 1px solid #c0d4f0;
+    }
+    .email-panel.visible { display: flex; }
+
+    .email-panel select {
+      width: 100%;
+      border: 1px solid #a8c0e8;
+      border-radius: 8px;
+      padding: 5px 8px;
+      font-size: 12px;
+      background: #fff;
+      color: #1a2e4a;
+      cursor: pointer;
+    }
+
+    .email-send-btn {
+      background: linear-gradient(135deg, #5ba3f5, #3d82e0);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .email-send-btn:disabled { opacity: 0.5; cursor: default; }
+    .email-send-btn:not(:disabled):hover { opacity: 0.88; }
+
+    .email-status {
+      font-size: 11px;
+      color: #905070;
+      line-height: 1.4;
+    }
+
+    /* ── Planner tab ── */
+    .planner-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .planner-body::-webkit-scrollbar { width: 3px; }
+    .planner-body::-webkit-scrollbar-thumb { background: #b0ccf0; border-radius: 3px; }
+
+    .planner-heading {
+      font-size: 14px;
+      font-weight: 700;
+      color: #1a2e4a;
+    }
+    .planner-sub {
+      font-size: 11px;
+      color: #507090;
+      line-height: 1.5;
+      margin-top: 3px;
+    }
+
+    .upload-zone {
+      display: block;
+      border: 1.5px dashed #e0a8c0;
+      border-radius: 12px;
+      padding: 14px 10px;
+      text-align: center;
+      cursor: pointer;
+      background: #fff;
+      transition: background 0.15s, border-color 0.15s;
+      width: 100%;
+    }
+    .upload-zone:hover { background: #f0f6fe; border-color: #6090d0; }
+    .upload-zone-icon { font-size: 20px; margin-bottom: 4px; display: block; }
+    .upload-zone-text { font-size: 11px; color: #507090; line-height: 1.5; display: block; }
+    .upload-zone-text strong { color: #507090; }
+
+    .file-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    .file-chip {
+      background: #d0e4f5;
+      border-radius: 20px;
+      padding: 3px 8px;
+      font-size: 10px;
+      color: #7a2050;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .file-chip button {
+      background: none;
+      border: none;
+      color: #507090;
+      cursor: pointer;
+      font-size: 11px;
+      padding: 0;
+      line-height: 1;
+    }
+
+    .planner-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: #905070;
+      margin-bottom: 4px;
+    }
+    .planner-textarea {
+      width: 100%;
+      border: 1px solid #a8c0e8;
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-size: 12px;
+      background: #fff;
+      color: #1a2e4a;
+      resize: none;
+      height: 80px;
+      font-family: inherit;
+      line-height: 1.5;
+    }
+    .planner-textarea:focus { outline: none; border-color: #70a0d0; }
+    .planner-textarea::placeholder { color: #c8a0b8; }
+
+    .planner-go-btn {
+      background: linear-gradient(135deg, #5ba3f5, #3d82e0);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      padding: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.15s;
+      box-shadow: 0 3px 10px rgba(61, 130, 224, 0.3);
+    }
+    .planner-go-btn:disabled { opacity: 0.5; cursor: default; box-shadow: none; }
+    .planner-go-btn:not(:disabled):hover { opacity: 0.88; }
+
+    .planner-status {
+      font-size: 11px;
+      color: #905070;
+      text-align: center;
+      line-height: 1.5;
+    }
+
+    .planner-section { display: flex; flex-direction: column; gap: 6px; }
+    .planner-row { display: flex; gap: 8px; }
+    .planner-row .planner-field { flex: 1; }
+    .planner-field { display: flex; flex-direction: column; gap: 3px; }
+    .planner-field label { font-size: 10px; font-weight: 600; color: #905070; text-transform: uppercase; letter-spacing: 0.4px; }
+    .planner-field input, .planner-field select {
+      border: 1px solid #a8c0e8;
+      border-radius: 8px;
+      padding: 5px 8px;
+      font-size: 12px;
+      background: #fff;
+      color: #1a2e4a;
+      font-family: inherit;
+      width: 100%;
+    }
+    .planner-field input:focus, .planner-field select:focus { outline: none; border-color: #70a0d0; }
+    .planner-field input::placeholder { color: #c8a0b8; }
+    .planner-divider { border: none; border-top: 1px solid #c0d4f0; margin: 2px 0; }
+
+    .required-star { color: #3d82e0; margin-left: 2px; }
+    .planner-field input.input-error {
+      border-color: #e05050 !important;
+      background: #fff5f7 !important;
+    }
+
+    /* ── History table ── */
+    .history-section { display: none; flex-direction: column; gap: 8px; }
+    .history-section.visible { display: flex; }
+    .history-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid #c0d4f0; }
+    .history-tbl { width: 100%; border-collapse: collapse; font-size: 10px; }
+    .history-tbl th {
+      background: #d0e4f5;
+      color: #7a2050;
+      padding: 6px 8px;
+      text-align: left;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      white-space: nowrap;
+    }
+    .history-tbl td {
+      padding: 6px 8px;
+      border-top: 1px solid #f5e0ea;
+      color: #1a2e4a;
+      white-space: nowrap;
+    }
+    .history-tbl tr:hover td { background: #fef5f9; }
+    .on-track-yes { color: #34c759; font-weight: 700; }
+    .on-track-no  { color: #e05050; font-weight: 700; }
+
+    /* ── Risk selector ── */
+    .risk-selector { display: flex; gap: 4px; }
+    .risk-btn {
+      flex: 1;
+      padding: 5px 0;
+      font-size: 10px;
+      font-weight: 700;
+      border: 1.5px solid #a0b8d0;
+      border-radius: 8px;
+      background: #fff;
+      color: #905070;
+      cursor: pointer;
+      transition: all 0.15s;
+      letter-spacing: 0.2px;
+    }
+    .risk-btn:hover { background: #f0f6fe; }
+    .risk-btn.active {
+      background: linear-gradient(135deg, #5ba3f5, #3d82e0);
+      color: #fff;
+      border-color: #3d82e0;
+    }
+
+    /* ── Retirement mode exit pill ── */
+    .retire-mode-bar {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      background: #deeeff;
+      border-bottom: 1px solid #b8ccf0;
+      padding: 6px 14px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #a03060;
+    }
+    .retire-mode-bar.visible { display: flex; }
+    .retire-mode-bar button {
+      background: none;
+      border: 1px solid #e0a0c0;
+      border-radius: 8px;
+      padding: 2px 8px;
+      font-size: 10px;
+      color: #507090;
+      cursor: pointer;
+    }
+    .retire-mode-bar button:hover { background: #e8f0fc; }
+
+    /* ── User footer ── */
+    .user-footer {
+      padding: 10px 14px;
+      border-top: 1px solid #3a6ea8;
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .user-footer.visible { display: flex; }
+    .user-email {
+      font-size: 11px;
+      color: #507090;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+    }
+    .signout-btn {
+      background: none;
+      border: 1px solid #b0cce0;
+      border-radius: 8px;
+      padding: 3px 8px;
+      font-size: 11px;
+      color: #507090;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .signout-btn:hover { background: #e8f0fc; }
+
+    /* ── Login overlay ── */
+    .login-overlay {
+      position: fixed;
+      inset: 0;
+      background: #e8f0fe;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .login-overlay.hidden { display: none; }
+
+    .login-card {
+      background: #fff;
+      border-radius: 28px;
+      padding: 44px 40px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      box-shadow: 0 24px 70px rgba(60,110,200,0.15), 0 4px 20px rgba(0,0,0,0.07);
+      width: 320px;
+    }
+
+    .login-avatar {
+      font-size: 48px;
+      line-height: 1;
+      filter: drop-shadow(0 4px 12px rgba(93,160,240,0.4));
+    }
+
+    .login-title {
+      font-size: 28px;
+      font-weight: 800;
+      color: #1a2e4a;
+      letter-spacing: -0.5px;
+    }
+
+    .login-sub {
+      font-size: 13px;
+      color: #b07090;
+      text-align: center;
+      line-height: 1.5;
+      margin-top: -6px;
+    }
+
+    .login-google-btn {
+      margin-top: 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #fff;
+      border: 1.5px solid #b0c8e8;
+      border-radius: 12px;
+      padding: 11px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #1a2e4a;
+      cursor: pointer;
+      width: 100%;
+      justify-content: center;
+      transition: background 0.15s, border-color 0.15s;
+      box-shadow: 0 2px 8px rgba(60,110,200,0.08);
+    }
+    .login-google-btn:hover { background: #f0f6fe; border-color: #6090d0; }
+    .login-google-btn:disabled { opacity: 0.5; cursor: default; }
+
+    .login-status {
+      font-size: 12px;
+      color: #507090;
+      text-align: center;
+      min-height: 18px;
+    }
+  </style>
+  <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1691.0.min.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+
+<!-- Login overlay — shown until Google sign-in completes -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-card">
+    <div class="login-avatar">🌸</div>
+    <div class="login-title">Lumi</div>
+    <div class="login-sub">Your personal AI companion.<br>Sign in to save your chats and plans.</div>
+    <button class="login-google-btn" id="loginGoogleBtn">
+      <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.964 10.706A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.706V4.962H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.038l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.962L3.964 7.294C4.672 5.163 6.656 3.58 9 3.58z"/></svg>
+      Sign in with Google
+    </button>
+    <div class="login-status" id="loginStatus"></div>
+  </div>
+</div>
+
+<div class="app">
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <span class="sidebar-title">Lumi</span>
+      <button class="new-chat-btn" id="newChatBtn" title="New chat">+</button>
+    </div>
+
+    <div class="sidebar-tabs">
+      <button class="tab-btn active" id="tabChats">💬 Chats</button>
+      <button class="tab-btn" id="tabPlanner">📊 Planner</button>
+    </div>
+
+    <!-- Chats tab -->
+    <div class="tab-content active" id="contentChats">
+      <div class="email-panel" id="emailPanel">
+        <select id="emailRange">
+          <option value="0">Since midnight</option>
+          <option value="6">Past 6 hours</option>
+          <option value="24">Past 24 hours</option>
+          <option value="48">Past 48 hours</option>
+        </select>
+        <button class="email-send-btn" id="emailSendBtn">Send Summary to Inbox</button>
+        <div class="email-status" id="emailStatus"></div>
+      </div>
+      <div class="convo-list" id="convoList">
+        <div class="empty-sidebar">Your chats will appear here</div>
+      </div>
+      <div style="padding:8px 14px;border-top:1px solid #c0d4f0;display:flex;justify-content:flex-end;">
+        <button class="email-btn" id="emailBtn">✉ Email Summary</button>
+      </div>
+    </div>
+
+    <!-- Planner tab -->
+    <div class="tab-content" id="contentPlanner">
+      <div class="planner-body">
+        <div>
+          <div class="planner-heading">Retirement Planner</div>
+          <div class="planner-sub">Fill in your details — Lumi calculates your plan with real numbers.</div>
+        </div>
+
+        <hr class="planner-divider">
+
+        <div class="planner-section">
+          <div class="planner-label">About You</div>
+          <div class="planner-field">
+            <label>Your Name</label>
+            <input type="text" id="pName" placeholder="Alex">
+          </div>
+          <div class="planner-row">
+            <div class="planner-field">
+              <label>Current Age<span class="required-star">*</span></label>
+              <input type="number" id="pAge" placeholder="32" min="18" max="80">
+            </div>
+            <div class="planner-field">
+              <label>Retire At<span class="required-star">*</span></label>
+              <input type="number" id="pRetireAge" placeholder="65" min="40" max="80">
+            </div>
+          </div>
+          <div class="planner-row">
+            <div class="planner-field">
+              <label>State</label>
+              <input type="text" id="pState" placeholder="CA" maxlength="2">
+            </div>
+            <div class="planner-field">
+              <label>Filing Status</label>
+              <select id="pFiling">
+                <option value="single">Single</option>
+                <option value="married">Married</option>
+              </select>
+            </div>
+          </div>
+          <div class="planner-field">
+            <label>Risk Tolerance</label>
+            <div class="risk-selector">
+              <button class="risk-btn" data-risk="conservative">Conservative</button>
+              <button class="risk-btn active" data-risk="moderate">Moderate</button>
+              <button class="risk-btn" data-risk="aggressive">Aggressive</button>
+            </div>
+          </div>
+        </div>
+
+        <hr class="planner-divider">
+
+        <div class="planner-section">
+          <div class="planner-label">Income</div>
+          <div class="planner-field">
+            <label>Annual Gross Income ($)<span class="required-star">*</span></label>
+            <input type="number" id="pIncome" placeholder="80000">
+          </div>
+          <div class="planner-row">
+            <div class="planner-field">
+              <label>401k Match %</label>
+              <input type="number" id="pMatchPct" placeholder="4" min="0" max="100">
+            </div>
+            <div class="planner-field">
+              <label>Up to % salary</label>
+              <input type="number" id="pMatchLimit" placeholder="4" min="0" max="100">
+            </div>
+          </div>
+        </div>
+
+        <hr class="planner-divider">
+
+        <div class="planner-section">
+          <div class="planner-label">Current Savings</div>
+          <div class="planner-field">
+            <label>401k Balance ($)</label>
+            <input type="number" id="p401k" placeholder="0">
+          </div>
+          <div class="planner-field">
+            <label>IRA / Roth IRA ($)</label>
+            <input type="number" id="pIra" placeholder="0">
+          </div>
+          <div class="planner-field">
+            <label>Brokerage / Other ($)</label>
+            <input type="number" id="pBrokerage" placeholder="0">
+          </div>
+        </div>
+
+        <hr class="planner-divider">
+
+        <div class="planner-section">
+          <div class="planner-label">Retirement Goal</div>
+          <div class="planner-field">
+            <label>Target Monthly Income ($)<span class="required-star">*</span></label>
+            <input type="number" id="pRetireIncome" placeholder="5000">
+          </div>
+        </div>
+
+        <div>
+          <div class="planner-label">Notes (optional)</div>
+          <textarea class="planner-textarea" id="retireNotes" placeholder="Debt, upcoming changes, questions…"></textarea>
+        </div>
+
+        <button class="planner-go-btn" id="retireGoBtn">✨ Generate My Retirement Plan</button>
+        <div class="planner-status" id="retireStatus"></div>
+
+        <div class="history-section" id="historySection">
+          <hr class="planner-divider">
+          <div class="planner-label">📈 Your Progress</div>
+          <div class="history-wrap">
+            <table class="history-tbl">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Income</th>
+                  <th>Savings</th>
+                  <th>Target</th>
+                  <th>Projected</th>
+                  <th>/mo</th>
+                  <th>Track</th>
+                </tr>
+              </thead>
+              <tbody id="historyBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="user-footer" id="userFooter">
+      <span class="user-email" id="userEmail"></span>
+      <button class="signout-btn" id="signoutBtn">Sign out</button>
+    </div>
+  </div>
+
+  <!-- Chat -->
+  <div class="chat-panel">
+    <div class="header">
+      <div class="avatar">🌸</div>
+      <div class="header-info">
+        <div class="name">Lumi</div>
+        <div class="status">
+          <span class="status-dot"></span>
+          <span id="status">Here for you</span>
+        </div>
+      </div>
+      <select class="model-select" id="modelSelect">
+        <option value="amazon.nova-micro-v1:0">Nova Micro</option>
+        <option value="amazon.nova-lite-v1:0">Nova Lite</option>
+        <option value="amazon.nova-pro-v1:0">Nova Pro</option>
+      </select>
+    </div>
+
+    <div class="retire-mode-bar" id="retireModeBar">
+      <span>📊 Retirement Planning Mode</span>
+      <div style="display:flex;gap:6px;">
+        <button id="refinePlanBtn">Refine Plan</button>
+        <button id="exitRetireBtn">Exit mode</button>
+      </div>
+    </div>
+
+    <div class="error-banner" id="errorBanner">
+      Couldn't reach Lumi — please try again in a moment.
+    </div>
+
+    <div class="messages" id="messages"></div>
+
+    <div class="input-area">
+      <div class="input-wrap">
+        <textarea id="input" rows="1" placeholder="Talk to Lumi…"></textarea>
+      </div>
+      <button class="send-btn" id="sendBtn" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="19" x2="12" y2="5"/>
+          <polyline points="5 12 12 5 19 12"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  AWS.config.update({
+    accessKeyId: '',
+    secretAccessKey: '',
+    region: 'us-east-1'
+  });
+  const _lambda = new AWS.Lambda();
+
+  let currentUserId = localStorage.getItem('lumi_user_id') || null;
+  let currentUserEmail = localStorage.getItem('lumi_email') || null;
+
+  function activeUserId() { return currentUserId; }
+
+  const loginOverlay  = document.getElementById('loginOverlay');
+  const loginGoogleBtn = document.getElementById('loginGoogleBtn');
+  const loginStatus   = document.getElementById('loginStatus');
+
+  function showApp() {
+    loginOverlay.classList.add('hidden');
+    updateUserFooter();
+    startNewChat();
+    loadConversations();
+    initProfile();
+  }
+
+  // Show login overlay if not signed in
+  if (!currentUserId) {
+    loginOverlay.classList.remove('hidden');
+  } else {
+    loginOverlay.classList.add('hidden');
+  }
+
+  async function callLambda(method, path, body) {
+    const event = {
+      requestContext: { http: { method, path } },
+      body: body != null ? JSON.stringify(body) : null,
+      userId: activeUserId()
+    };
+    const result = await _lambda.invoke({
+      FunctionName: 'lumi-api',
+      Payload: JSON.stringify(event)
+    }).promise();
+    const response = JSON.parse(result.Payload);
+    if (response.statusCode >= 400) {
+      let msg = `HTTP ${response.statusCode}`;
+      try { msg = JSON.parse(response.body).error || msg; } catch {}
+      throw new Error(msg);
+    }
+    return JSON.parse(response.body);
+  }
+
+  const messagesEl = document.getElementById('messages');
+  const inputEl = document.getElementById('input');
+  const sendBtn = document.getElementById('sendBtn');
+  const statusEl = document.getElementById('status');
+  const errorBanner = document.getElementById('errorBanner');
+  const modelSelect = document.getElementById('modelSelect');
+  const convoListEl = document.getElementById('convoList');
+  const newChatBtn = document.getElementById('newChatBtn');
+
+  let currentId = null;
+  let history = [];
+  let chatMode = 'general';
+
+  function generateId() {
+    const date = new Date().toISOString().slice(0, 10);
+    const rand = Math.random().toString(36).slice(2, 7);
+    return `${date}_${rand}`;
+  }
+
+  function now() {
+    return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function escapeHtml(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function addBubble(role, text) {
+    const row = document.createElement('div');
+    row.className = `bubble-row ${role}`;
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    bubble.textContent = text;
+    const ts = document.createElement('div');
+    ts.className = 'timestamp';
+    ts.textContent = now();
+    row.appendChild(bubble);
+    row.appendChild(ts);
+    messagesEl.appendChild(row);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  function showTyping() {
+    const row = document.createElement('div');
+    row.className = 'bubble-row assistant';
+    const indicator = document.createElement('div');
+    indicator.className = 'typing-indicator visible';
+    indicator.innerHTML = '<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
+    row.appendChild(indicator);
+    messagesEl.appendChild(row);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+    return row;
+  }
+
+  function addWelcome() {
+    const row = document.createElement('div');
+    row.className = 'bubble-row assistant';
+    row.innerHTML = '<div class="bubble">Hey, it\'s Lumi 🌸 I\'m really glad you\'re here. What\'s going on?</div><div class="timestamp">Now</div>';
+    messagesEl.appendChild(row);
+  }
+
+  // ── Conversations (DynamoDB via server) ──
+
+  async function loadConversations() {
+    try {
+      const convos = await callLambda('GET', '/conversations');
+      renderSidebar(convos);
+    } catch {}
+  }
+
+  const TOPIC_ORDER = ['sports', 'coding', 'advice', 'creative', 'learning', 'food', 'travel', 'health', 'music', 'entertainment', 'relationships', 'news', 'casual', 'other'];
+
+  function renderSidebar(convos) {
+    if (!convos.length) {
+      convoListEl.innerHTML = '<div class="empty-sidebar">Your chats will appear here</div>';
+      return;
+    }
+    const grouped = {};
+    for (const c of convos) {
+      const topic = c.topic || 'other';
+      if (!grouped[topic]) grouped[topic] = [];
+      grouped[topic].push(c);
+    }
+    convoListEl.innerHTML = '';
+    const ordered = TOPIC_ORDER.filter(t => grouped[t]);
+    const rest = Object.keys(grouped).filter(t => !TOPIC_ORDER.includes(t));
+    for (const topic of [...ordered, ...rest]) {
+      const group = document.createElement('div');
+      group.className = 'topic-group';
+
+      const header = document.createElement('div');
+      header.className = 'topic-header';
+      header.innerHTML = `<span>${topic}</span><span class="topic-arrow">▾</span>`;
+      header.addEventListener('click', () => group.classList.toggle('collapsed'));
+      group.appendChild(header);
+
+      const items = document.createElement('div');
+      items.className = 'topic-items';
+      for (const c of grouped[topic]) {
+        const item = document.createElement('div');
+        item.className = 'convo-item' + (c.id === currentId ? ' active' : '');
+        item.dataset.id = c.id;
+        item.innerHTML = `
+          <div class="convo-title">${escapeHtml(c.title || 'Untitled')}</div>
+          <button class="delete-btn" title="Delete">🗑</button>
+        `;
+        item.addEventListener('click', (e) => {
+          if (e.target.classList.contains('delete-btn')) {
+            deleteConversation(c.id);
+          } else {
+            openConversation(c.id);
+          }
+        });
+        items.appendChild(item);
+      }
+      group.appendChild(items);
+      convoListEl.appendChild(group);
+    }
+  }
+
+  async function openConversation(id) {
+    try {
+      const convo = await callLambda('GET', `/conversations/${id}`);
+      currentId = id;
+      history = convo.messages || [];
+      messagesEl.innerHTML = '';
+      if (!history.length) {
+        addWelcome();
+      } else {
+        for (const m of history) addBubble(m.role, m.content);
+      }
+      await loadConversations();
+    } catch {}
+  }
+
+  async function deleteConversation(id) {
+    await callLambda('DELETE', `/conversations/${id}`);
+    if (id === currentId) startNewChat();
+    else await loadConversations();
+  }
+
+  async function saveConversation() {
+    if (!history.length) return;
+    let topic = 'other';
+    if (history.length >= 2) {
+      try {
+        const td = await callLambda('POST', '/topic', { messages: history });
+        topic = td.topic || 'other';
+      } catch {}
+    }
+    await callLambda('POST', '/conversations', {
+      id: currentId,
+      title: history[0].content.slice(0, 45),
+      updated_at: new Date().toISOString(),
+      topic,
+      messages: history
+    });
+    await loadConversations();
+  }
+
+  function startNewChat() {
+    currentId = generateId();
+    history = [];
+    chatMode = 'general';
+    messagesEl.innerHTML = '';
+    updateModeIndicator();
+    addWelcome();
+    loadConversations();
+  }
+
+  function updateModeIndicator() {
+    const existing = document.getElementById('retireModeTag');
+    if (chatMode === 'retirement') {
+      if (!existing) {
+        const tag = document.createElement('span');
+        tag.id = 'retireModeTag';
+        tag.textContent = '📊 Retirement Mode';
+        tag.style.cssText = 'font-size:10px;background:#b8ccf0;color:#7a2050;border-radius:8px;padding:2px 8px;font-weight:600;margin-left:8px;';
+        document.querySelector('.header-info .name').appendChild(tag);
+      }
+    } else {
+      if (existing) existing.remove();
+    }
+  }
+
+  // ── Send ──
+
+  async function send() {
+    const text = inputEl.value.trim();
+    if (!text) return;
+
+    errorBanner.classList.remove('visible');
+    inputEl.value = '';
+    inputEl.style.height = 'auto';
+    statusEl.textContent = 'Typing…';
+    sendBtn.disabled = true;
+
+    addBubble('user', text);
+    history.push({ role: 'user', content: text });
+
+    const typingRow = showTyping();
+
+    try {
+      const data = await callLambda('POST', '/chat', { model: modelSelect.value, messages: history, mode: chatMode });
+      typingRow.remove();
+      addBubble('assistant', data.reply);
+      history.push({ role: 'assistant', content: data.reply });
+      await saveConversation();
+    } catch (err) {
+      typingRow.remove();
+      errorBanner.classList.add('visible');
+    } finally {
+      statusEl.textContent = 'Here for you';
+      sendBtn.disabled = !inputEl.value.trim();
+      inputEl.focus();
+    }
+  }
+
+  inputEl.addEventListener('input', () => {
+    sendBtn.disabled = !inputEl.value.trim();
+    inputEl.style.height = 'auto';
+    inputEl.style.height = Math.min(inputEl.scrollHeight, 110) + 'px';
+  });
+
+  inputEl.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (!sendBtn.disabled) send();
+    }
+  });
+
+  sendBtn.addEventListener('click', send);
+  newChatBtn.addEventListener('click', startNewChat);
+
+  // ── Tabs ──
+  const tabChats = document.getElementById('tabChats');
+  const tabPlanner = document.getElementById('tabPlanner');
+  const contentChats = document.getElementById('contentChats');
+  const contentPlanner = document.getElementById('contentPlanner');
+
+  tabChats.addEventListener('click', () => {
+    tabChats.classList.add('active'); tabPlanner.classList.remove('active');
+    contentChats.classList.add('active'); contentPlanner.classList.remove('active');
+  });
+  tabPlanner.addEventListener('click', () => {
+    tabPlanner.classList.add('active'); tabChats.classList.remove('active');
+    contentPlanner.classList.add('active'); contentChats.classList.remove('active');
+    loadRetirementHistory();
+  });
+
+  // ── Email ──
+  const emailBtn = document.getElementById('emailBtn');
+  const emailPanel = document.getElementById('emailPanel');
+  const emailRange = document.getElementById('emailRange');
+  const emailSendBtn = document.getElementById('emailSendBtn');
+  const emailStatus = document.getElementById('emailStatus');
+
+  const userEmailEl = document.getElementById('userEmail');
+  const userFooter = document.getElementById('userFooter');
+  const signoutBtn = document.getElementById('signoutBtn');
+
+  function updateUserFooter() {
+    if (currentUserId) {
+      userEmailEl.textContent = currentUserEmail || '';
+      userFooter.classList.add('visible');
+    } else {
+      userFooter.classList.remove('visible');
+    }
+  }
+
+  function triggerGoogleSignIn(onSuccess, statusEl) {
+    const client = google.accounts.oauth2.initCodeClient({
+      client_id: '239500915432-lc6mcqd6o50mdrucrdl1stf8ae4q8anv.apps.googleusercontent.com',
+      scope: 'openid email profile https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send',
+      ux_mode: 'popup',
+      callback: async (response) => {
+        if (response.error) {
+          if (statusEl) statusEl.textContent = 'Sign-in failed: ' + response.error;
+          return;
+        }
+        try {
+          const res = await callLambda('POST', '/auth', { code: response.code });
+          currentUserId = res.user_id;
+          currentUserEmail = res.email;
+          localStorage.setItem('lumi_user_id', res.user_id);
+          localStorage.setItem('lumi_email', res.email);
+          if (onSuccess) onSuccess();
+        } catch (e) {
+          if (statusEl) statusEl.textContent = 'Sign-in error: ' + e.message;
+        }
+      }
+    });
+    client.requestCode();
+  }
+
+  loginGoogleBtn.addEventListener('click', () => {
+    loginGoogleBtn.disabled = true;
+    loginStatus.textContent = 'Opening Google sign-in…';
+    triggerGoogleSignIn(
+      () => showApp(),
+      loginStatus
+    );
+  });
+
+  emailBtn.addEventListener('click', () => {
+    emailPanel.classList.toggle('visible');
+  });
+
+  emailSendBtn.addEventListener('click', async () => {
+    emailStatus.textContent = 'Fetching & summarizing…';
+    emailSendBtn.disabled = true;
+    try {
+      const hours = parseInt(emailRange.value);
+      const res = await callLambda('POST', '/email-summary', { hours });
+      emailStatus.textContent = res.count === 0
+        ? 'No emails found in that period.'
+        : `Done! Summary of ${res.count} email${res.count !== 1 ? 's' : ''} sent to your inbox.`;
+    } catch (e) {
+      emailStatus.textContent = 'Failed: ' + e.message;
+    } finally {
+      emailSendBtn.disabled = false;
+    }
+  });
+
+  signoutBtn.addEventListener('click', () => {
+    currentUserId = null;
+    currentUserEmail = null;
+    localStorage.removeItem('lumi_user_id');
+    localStorage.removeItem('lumi_email');
+    emailPanel.classList.remove('visible');
+    updateUserFooter();
+    loginGoogleBtn.disabled = false;
+    loginStatus.textContent = '';
+    loginOverlay.classList.remove('hidden');
+  });
+
+  // ── Risk selector ──
+  let selectedRisk = 'moderate';
+  document.querySelectorAll('.risk-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.risk-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedRisk = btn.dataset.risk;
+    });
+  });
+
+  // ── Retirement mode bar ──
+  const retireModeBar = document.getElementById('retireModeBar');
+  const exitRetireBtn = document.getElementById('exitRetireBtn');
+  const refinePlanBtn = document.getElementById('refinePlanBtn');
+
+  function updateModeIndicator() {
+    if (chatMode === 'retirement') {
+      retireModeBar.classList.add('visible');
+    } else {
+      retireModeBar.classList.remove('visible');
+    }
+  }
+
+  exitRetireBtn.addEventListener('click', () => {
+    chatMode = 'general';
+    updateModeIndicator();
+  });
+
+  refinePlanBtn.addEventListener('click', () => {
+    tabPlanner.click();
+  });
+
+  // ── Retirement Planner ──
+  const retireNotes = document.getElementById('retireNotes');
+  const retireGoBtn = document.getElementById('retireGoBtn');
+  const retireStatus = document.getElementById('retireStatus');
+
+  async function loadRetirementHistory() {
+    try {
+      const items = await callLambda('GET', '/retirement-history');
+      if (!items.length) return;
+      const fmt = v => '$' + Math.round(v).toLocaleString();
+      const rows = items.map(item => {
+        const savings = (item.bal_401k||0) + (item.bal_ira||0) + (item.bal_brokerage||0);
+        const date = new Date(item.timestamp).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        return `<tr>
+          <td>${date}</td>
+          <td>${fmt(item.income)}</td>
+          <td>${fmt(savings)}</td>
+          <td>${fmt(item.nest_egg_target)}</td>
+          <td>${fmt(item.projected)}</td>
+          <td>${fmt(item.projected_monthly_income)}</td>
+          <td class="${item.on_track ? 'on-track-yes' : 'on-track-no'}">${item.on_track ? '✓' : '✗'}</td>
+        </tr>`;
+      }).join('');
+      document.getElementById('historyBody').innerHTML = rows;
+      document.getElementById('historySection').classList.add('visible');
+    } catch {}
+  }
+
+  retireGoBtn.addEventListener('click', async () => {
+    const planData = {
+      age:          parseInt(document.getElementById('pAge').value) || null,
+      retire_age:   parseInt(document.getElementById('pRetireAge').value) || null,
+      state:        document.getElementById('pState').value.trim().toUpperCase(),
+      filing:       document.getElementById('pFiling').value,
+      income:       parseFloat(document.getElementById('pIncome').value) || null,
+      match_pct:    parseFloat(document.getElementById('pMatchPct').value) || 0,
+      match_limit:  parseFloat(document.getElementById('pMatchLimit').value) || 0,
+      bal_401k:     parseFloat(document.getElementById('p401k').value) || 0,
+      bal_ira:      parseFloat(document.getElementById('pIra').value) || 0,
+      bal_brokerage:parseFloat(document.getElementById('pBrokerage').value) || 0,
+      retire_income:parseFloat(document.getElementById('pRetireIncome').value) || null,
+      risk: selectedRisk,
+    };
+    const requiredFields = { age: 'pAge', retire_age: 'pRetireAge', income: 'pIncome', retire_income: 'pRetireIncome' };
+    const labels = { age: 'Current Age', retire_age: 'Retire At', income: 'Annual Income', retire_income: 'Target Monthly Income' };
+    const missing = Object.keys(requiredFields).filter(k => !planData[k]);
+    Object.keys(requiredFields).forEach(k => {
+      const el = document.getElementById(requiredFields[k]);
+      if (!planData[k]) {
+        el.classList.add('input-error');
+        el.addEventListener('input', () => el.classList.remove('input-error'), { once: true });
+      }
+    });
+    if (missing.length) {
+      retireStatus.textContent = `Please fill in: ${missing.map(k => labels[k]).join(', ')}`;
+      return;
+    }
+    retireStatus.textContent = '✨ Calculating your plan…';
+    retireGoBtn.disabled = true;
+    try {
+      const res = await callLambda('POST', '/retirement-plan', {
+        plan_data: planData,
+        notes: document.getElementById('retireNotes').value.trim(),
+        name: document.getElementById('pName').value.trim(),
+      });
+      retireStatus.textContent = '';
+      await loadRetirementHistory();
+      chatMode = 'retirement';
+      updateModeIndicator();
+      tabChats.click();
+      history.push({ role: 'user', content: '📊 Please generate my retirement plan based on my financial documents and goals.' });
+      history.push({ role: 'assistant', content: res.reply });
+      messagesEl.innerHTML = '';
+      for (const m of history) addBubble(m.role, m.content);
+      await saveConversation();
+    } catch (e) {
+      retireStatus.textContent = 'Failed: ' + e.message;
+    } finally {
+      retireGoBtn.disabled = false;
+    }
+  });
+
+  // ── Load profile for returning users ──
+  async function initProfile() {
+    try {
+      const profile = await callLambda('GET', '/profile');
+      if (!profile || !Object.keys(profile).length) return; // new user, nothing to fill
+
+      // Pre-fill planner form with last known values
+      if (profile.name)    document.getElementById('pName').value      = profile.name;
+      if (profile.age_val) document.getElementById('pAge').value       = profile.age_val;
+      if (profile.state)   document.getElementById('pState').value     = profile.state;
+      if (profile.filing)  document.getElementById('pFiling').value    = profile.filing;
+
+      // Load their plan history
+      await loadRetirementHistory();
+    } catch {}
+  }
+
+  // If already signed in (returning user), go straight to app
+  if (currentUserId) {
+    showApp();
+  }
+</script>
+</body>
+</html>
