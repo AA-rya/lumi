@@ -270,7 +270,7 @@ def handler(event, context):
     http = event.get("requestContext", {}).get("http", {})
     method = http.get("method", "GET")
     path = http.get("path", "/")
-    user_id = event.get("userId", "")
+    user_id = event.get("userId") or event.get("headers", {}).get("x-user-id", "")
 
     try:
         body = json.loads(event.get("body") or "{}")
