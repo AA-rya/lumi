@@ -1,0 +1,8 @@
+.env
+setup_gmail_oauth.py
+.DS_Store
+venv/
+__pycache__/
+*.pyc
+lambda.zip
+package/
