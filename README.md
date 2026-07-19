@@ -56,3 +56,4 @@ cd package && zip -r ../lambda.zip . && cd ..
 rm package/lambda_function.py
 aws lambda update-function-code --function-name lumi-api --zip-file fileb://lambda.zip --region us-east-1
 ```
+commit
