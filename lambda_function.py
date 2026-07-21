@@ -6,6 +6,12 @@ import boto3
 from boto3.dynamodb.conditions import Attr, Key
 from email.mime.text import MIMEText
 from datetime import datetime, timedelta, timezone
+import logging
+
+# Configure logging for Lambda CloudWatch
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
 from decimal import Decimal
 
 BEDROCK_REGION = "us-east-1"
