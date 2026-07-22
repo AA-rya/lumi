@@ -272,6 +272,64 @@ def respond(body, status=200):
     }
 
 
+
+
+def validate_chat_messages(messages):
+    """Validate chat message payload before sending to Bedrock.
+    
+    Args:
+        messages: List of message dicts to validate
+        
+    Returns:
+        tuple: (is_valid, error_message)
+    """
+    if not isinstance(messages, list):
+        return False, "messages must be a list"
+    
+    if len(messages) == 0:
+        return False, "messages cannot be empty"
+    
+    valid_roles = {"user", "assistant"}
+    for i, msg in enumerate(messages):
+        if not isinstance(msg, dict):
+            return False, f"message {i} must be a dict"
+        
+        if "role" not in msg:
+            return False, f"message {i} missing required field: role"
+        
+        if msg["role"] not in valid_roles:
+            return False, f"message {i} has invalid role: {msg['role']} (must be 'user' or 'assistant')"
+        
+        if "content" not in msg or not isinstance(msg["content"], str):
+            return False, f"message {i} missing or invalid content (must be string)"
+        
+        if len(msg["content"].strip()) == 0:
+            return False, f"message {i} content cannot be empty"
+    
+    return True, None
+
+
+def validate_model_id(model_id):
+    """Validate that model_id is an allowed Bedrock model.
+    
+    Args:
+        model_id: Model identifier string
+        
+    Returns:
+        tuple: (is_valid, error_message)
+    """
+    allowed_models = {
+        "amazon.nova-micro-v1:0",
+        "amazon.nova-lite-v1:0", 
+        "amazon.nova-pro-v1:0",
+    }
+    
+    if model_id not in allowed_models:
+        return False, f"model_id '{model_id}' not allowed. Allowed: {', '.join(sorted(allowed_models))}"
+    
+    return True, None
+
+
 def handler(event, context):
     http = event.get("requestContext", {}).get("http", {})
     method = http.get("method", "GET")
@@ -402,6 +460,17 @@ def handler(event, context):
         messages = body.get("messages", [])
         model = body.get("model", "amazon.nova-micro-v1:0")
         mode = body.get("mode", "general")
+        
+        # Validate messages before processing
+        valid, error = validate_chat_messages(messages)
+        if not valid:
+            return respond({"error": f"Invalid messages: {error}"}, 400)
+        
+        # Validate model_id
+        valid, error = validate_model_id(model)
+        if not valid:
+            return respond({"error": error}, 400)
+        
         system = RETIREMENT_CHAT_PROMPT if mode == "retirement" else SYSTEM_PROMPT
         bedrock_messages = [
             {"role": m["role"], "content": [{"text": m["content"] or " "}]}
@@ -415,7 +484,8 @@ def handler(event, context):
             )
             text = data["output"]["message"]["content"][0]["text"]
         except Exception as e:
-            text = f"Error: {e}"
+            logger.error(f"Bedrock error in /chat: {str(e)}")
+            text = f"Error communicating with AI: {str(e)}"
         return respond({"reply": text})
 
     if method == "POST" and path == "/retirement-plan":
