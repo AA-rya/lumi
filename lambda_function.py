@@ -416,9 +416,25 @@ def handler(event, context):
         return respond({"ok": True})
 
     if method == "DELETE" and path.startswith("/conversations/"):
+        if not user_id:
+            return respond({"error": "not authenticated"}, 401)
         convo_id = path.split("/")[-1]
-        table.delete_item(Key={"user_id": user_id, "id": convo_id})
-        return respond({"ok": True})
+        if not convo_id:
+            return respond({"error": "missing conversation id"}, 400)
+        try:
+            response = table.delete_item(
+                Key={"user_id": user_id, "id": convo_id},
+                ReturnValues="NONE"
+            )
+            if response.get("ResponseMetadata", {}).get("HTTPStatusCode") == 200:
+                logger.info(f"Deleted conversation {convo_id} for user {user_id}")
+                return respond({"ok": True})
+            else:
+                logger.error(f"Delete failed with status {response.get('ResponseMetadata', {}).get('HTTPStatusCode')}")
+                return respond({"error": "delete operation failed"}, 500)
+        except Exception as e:
+            logger.error(f"Error deleting conversation {convo_id}: {str(e)}")
+            return respond({"error": f"failed to delete: {str(e)}"}, 500)
 
     if method == "POST" and path == "/topic":
         messages = body.get("messages", [])[:6]
