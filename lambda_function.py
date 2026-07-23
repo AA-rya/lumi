@@ -418,13 +418,20 @@ def handler(event, context):
 
     if method == "POST" and path == "/conversations":
         if not user_id:
+            logger.warning("Attempted to create conversation without authentication")
             return respond({"error": "not authenticated"}, 401)
         convo_id = body.get("id", "")
         if not convo_id:
+            logger.warning(f"Attempted to create conversation without ID for user {user_id}")
             return respond({"error": "missing id"}, 400)
         body["user_id"] = user_id
-        table.put_item(Item=body)
-        return respond({"ok": True})
+        try:
+            table.put_item(Item=body)
+            logger.info(f"Created conversation {convo_id} for user {user_id}")
+            return respond({"ok": True})
+        except Exception as e:
+            logger.error(f"Error creating conversation {convo_id}: {str(e)}")
+            return respond({"error": "failed to create conversation"}, 500)
 
     if method == "DELETE" and path.startswith("/conversations/"):
         if not user_id:
