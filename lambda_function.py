@@ -398,12 +398,23 @@ def handler(event, context):
         return respond(convos)
 
     if method == "GET" and path.startswith("/conversations/"):
+        if not user_id:
+            return respond({"error": "not authenticated"}, 401)
         convo_id = path.split("/")[-1]
-        result = table.get_item(Key={"user_id": user_id, "id": convo_id})
-        item = result.get("Item")
-        if not item:
-            return respond({"error": "not found"}, 404)
-        return respond(item)
+        if not convo_id or convo_id == "":
+            logger.warning(f"Attempted to get conversation with empty ID for user {user_id}")
+            return respond({"error": "missing conversation id"}, 400)
+        try:
+            result = table.get_item(Key={"user_id": user_id, "id": convo_id})
+            item = result.get("Item")
+            if not item:
+                logger.warning(f"Conversation {convo_id} not found for user {user_id}")
+                return respond({"error": "not found"}, 404)
+            logger.info(f"Retrieved conversation {convo_id} for user {user_id}")
+            return respond(item)
+        except Exception as e:
+            logger.error(f"Error retrieving conversation {convo_id}: {str(e)}")
+            return respond({"error": "failed to retrieve conversation"}, 500)
 
     if method == "POST" and path == "/conversations":
         if not user_id:
