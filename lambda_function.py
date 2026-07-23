@@ -468,7 +468,9 @@ def handler(event, context):
             topic = raw.strip().lower().split()[0]
             if topic not in VALID_TOPICS:
                 topic = "other"
-        except Exception:
+            logger.info(f"Classified conversation topic as: {topic}")
+        except Exception as e:
+            logger.error(f"Error classifying conversation topic: {str(e)}")
             topic = "other"
         return respond({"topic": topic})
 
